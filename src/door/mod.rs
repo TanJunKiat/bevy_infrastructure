@@ -209,14 +209,11 @@ fn spawn_door(
             // Parent the child to the joint
             commands.entity(joint).add_child(door);
             commands.entity(entity).add_child(joint);
-    
+            commands.entity(entity).insert(DoorState::default());
+            commands.entity(entity).insert(DoorGoal::default());
             }
             DoorType::DoubleSwinging => {}
         }
-
-        // Add components to the door
-        commands.entity(entity).insert(DoorState::default());
-        commands.entity(entity).insert(DoorGoal::default());
     }
 }
 
