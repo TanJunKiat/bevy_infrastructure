@@ -1,4 +1,5 @@
 # bevy_infrastructure
+<img src="docs/videos/summary.gif"/>
 
 This crate provides infrastructure entities that are interactive via Bevy events.
 
