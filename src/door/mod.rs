@@ -152,6 +152,9 @@ impl PartialEq<DoorState> for DoorGoal {
     }
 }
 
+#[derive(Component)]
+pub struct DoorJoint;
+
 /// A Bevy plugin for doors.
 pub struct BevyDoorPlugin;
 
@@ -177,7 +180,7 @@ fn spawn_door(
     >,
 ) {
     // spawn a parent and a controller
-    for (entity, properties, mut transform, dimensions) in queries.iter_mut() {
+    for (entity, properties, transform, dimensions) in queries.iter_mut() {
         match properties.door_type {
             DoorType::SingleSliding => {}
             DoorType::DoubleSliding => {}
@@ -201,21 +204,17 @@ fn spawn_door(
 
                 let joint = commands
                     .spawn(PbrBundle {
-                        transform: Transform {
-                            rotation: transform.rotation,
-                            ..default()
-                        },
+                        transform: Transform { ..default() },
                         ..default()
                     })
                     .id();
 
-                transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
-
                 // Parent the child to the joint
                 commands.entity(joint).add_child(door);
+                commands.entity(joint).insert(DoorJoint);
+                commands.entity(joint).insert(DoorState::default());
+                commands.entity(joint).insert(DoorGoal::default());
                 commands.entity(entity).add_child(joint);
-                commands.entity(entity).insert(DoorState::default());
-                commands.entity(entity).insert(DoorGoal::default());
             }
             DoorType::DoubleSwinging => {
                 commands.spawn(DoorBundle {
@@ -259,11 +258,18 @@ fn spawn_door(
 /// A system to update the door goal based on the door event.
 fn update_door_goal(
     mut door_requests: EventReader<DoorEvent>,
-    mut queries: Query<(&DoorProperties, &DoorState, &mut DoorGoal), With<DoorProperties>>,
+    door_property_queries: Query<&DoorProperties, With<DoorProperties>>,
+    mut door_goal_quries: Query<(&Parent, &DoorState, &mut DoorGoal), With<DoorJoint>>,
 ) {
     for door_request in door_requests.read() {
-        for (properties, state, mut goal) in queries.iter_mut() {
-            if door_request.name != properties.name {
+        for (parent, state, mut goal) in door_goal_quries.iter_mut() {
+            let door_entity = parent.get();
+
+            let properties = door_property_queries
+                .get(door_entity)
+                .expect("Door properties not found");
+
+            if properties.name != door_request.name {
                 continue;
             }
 
@@ -289,15 +295,19 @@ fn update_door_goal(
 
 /// A system to update the door movement based on the door goal.
 fn update_door_movement(
-    mut queries: Query<
-        (&DoorProperties, &mut Transform, &mut DoorState, &DoorGoal),
-        With<DoorProperties>,
-    >,
+    door_property_queries: Query<&DoorProperties, With<DoorProperties>>,
+    mut queries: Query<(&Parent, &mut Transform, &mut DoorState, &DoorGoal), With<DoorGoal>>,
 ) {
-    for (properties, mut transform, mut state, goal) in queries.iter_mut() {
+    for (parent, mut transform, mut state, goal) in queries.iter_mut() {
         if *goal == *state {
             continue;
         }
+
+        let door_entity = parent.get();
+
+        let properties = door_property_queries
+            .get(door_entity)
+            .expect("Door properties not found");
 
         debug!("Moving door {}", properties.name);
 
