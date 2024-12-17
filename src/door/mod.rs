@@ -165,54 +165,93 @@ impl Plugin for BevyDoorPlugin {
 }
 
 /// A system to spawn doors.
-/// 
+///
 /// The condition for spawning doors is when the door properties are added.
 fn spawn_door(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut queries: Query<(Entity, &DoorProperties, &mut Transform, &DoorDimensions), Added<DoorProperties>>,
+    mut queries: Query<
+        (Entity, &DoorProperties, &mut Transform, &DoorDimensions),
+        Added<DoorProperties>,
+    >,
 ) {
     // spawn a parent and a controller
     for (entity, properties, mut transform, dimensions) in queries.iter_mut() {
-        
         match properties.door_type {
             DoorType::SingleSliding => {}
             DoorType::DoubleSliding => {}
             DoorType::SingleSwinging => {
                 let door = commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(Cuboid::new(
-                        dimensions.length,
+                    .spawn(PbrBundle {
+                        mesh: meshes.add(Cuboid::new(
+                            dimensions.length,
+                            dimensions.height,
+                            dimensions.thickness,
+                        )),
+                        material: materials.add(Color::srgb_u8(124, 144, 255)),
+                        transform: Transform::from_xyz(
+                            dimensions.length / 2.0,
+                            dimensions.height / 2.0,
+                            0.0,
+                        ),
+                        ..default()
+                    })
+                    .id();
+
+                let joint = commands
+                    .spawn(PbrBundle {
+                        transform: Transform {
+                            rotation: transform.rotation,
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .id();
+
+                transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
+
+                // Parent the child to the joint
+                commands.entity(joint).add_child(door);
+                commands.entity(entity).add_child(joint);
+                commands.entity(entity).insert(DoorState::default());
+                commands.entity(entity).insert(DoorGoal::default());
+            }
+            DoorType::DoubleSwinging => {
+                commands.spawn(DoorBundle {
+                    door_properties: DoorProperties::new(
+                        properties.name.clone(),
+                        properties.swing_value.clone(),
+                        DoorType::SingleSwinging,
+                    ),
+                    door_dimensions: DoorDimensions::new(
+                        dimensions.length / 2.0,
                         dimensions.height,
                         dimensions.thickness,
-                    )),
-                    material: materials.add(Color::srgb_u8(124, 144, 255)),
-                    transform: Transform::from_xyz(
-                        dimensions.length / 2.0,
-                        dimensions.height / 2.0,
-                        0.0,
                     ),
-                    ..default()
-                })
-                .id();
-    
-            let joint = commands
-                .spawn(PbrBundle {
-                    transform: *transform,
-                    ..default()
-                })
-                .id();
-    
-            transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
-    
-            // Parent the child to the joint
-            commands.entity(joint).add_child(door);
-            commands.entity(entity).add_child(joint);
-            commands.entity(entity).insert(DoorState::default());
-            commands.entity(entity).insert(DoorGoal::default());
+                    transform: transform.clone(),
+                    ..Default::default()
+                });
+
+                let mut door_transform = transform.clone();
+                door_transform.translation.x += dimensions.length;
+                door_transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+
+                commands.spawn(DoorBundle {
+                    door_properties: DoorProperties::new(
+                        properties.name.clone(),
+                        -properties.swing_value.clone(),
+                        DoorType::SingleSwinging,
+                    ),
+                    door_dimensions: DoorDimensions::new(
+                        dimensions.length / 2.0,
+                        dimensions.height,
+                        dimensions.thickness,
+                    ),
+                    transform: door_transform,
+                    ..Default::default()
+                });
             }
-            DoorType::DoubleSwinging => {}
         }
     }
 }
@@ -272,7 +311,9 @@ fn update_door_movement(
                         *state = DoorState::Closed;
                     } else {
                         *state = DoorState::Closing;
-                        transform.rotate(Quat::from_rotation_y(-0.01*properties.swing_value.signum()));
+                        transform.rotate(Quat::from_rotation_y(
+                            -0.01 * properties.swing_value.signum(),
+                        ));
                     }
                 }
                 DoorGoal::Open => {
@@ -280,12 +321,16 @@ fn update_door_movement(
                         "Moving door {:?}",
                         transform.rotation.to_euler(EulerRot::ZYX)
                     );
-                    if transform.rotation.to_euler(EulerRot::ZYX).1.abs() >= properties.swing_value.abs() {
+                    if transform.rotation.to_euler(EulerRot::ZYX).1.abs()
+                        >= properties.swing_value.abs()
+                    {
                         transform.rotation = Quat::from_rotation_y(properties.swing_value);
                         *state = DoorState::Open;
                     } else {
                         *state = DoorState::Opening;
-                        transform.rotate(Quat::from_rotation_y(0.01*properties.swing_value.signum()));
+                        transform.rotate(Quat::from_rotation_y(
+                            0.01 * properties.swing_value.signum(),
+                        ));
                     }
                 }
             },
