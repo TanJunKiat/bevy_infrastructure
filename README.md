@@ -1,4 +1,5 @@
 # bevy_infrastructure
+<img src="docs/videos/summary.gif"/>
 
 This crate provides infrastructure entities that are interactive via Bevy events.
 
@@ -39,3 +40,16 @@ fn close_door(mut door_request: EventWriter<DoorEvent>) {
     door_request.send(DoorEvent::close("door_1".to_string()));
 }
 ```
+
+# Examples
+### Single swinging door
+<img src="docs/videos/single_swing.gif" width="50%"/>
+
+### Double swinging door
+<img src="docs/videos/double_swing.gif" width="50%"/>
+
+### Single sliding door
+<img src="docs/videos/single_slide.gif" width="50%"/>
+
+### Double sliding door
+<img src="docs/videos/double_slide.gif" width="50%"/>
