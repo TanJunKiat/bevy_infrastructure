@@ -171,39 +171,48 @@ fn spawn_door(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut queries: Query<(Entity, &mut Transform, &DoorDimensions), Added<DoorProperties>>,
+    mut queries: Query<(Entity, &DoorProperties, &mut Transform, &DoorDimensions), Added<DoorProperties>>,
 ) {
     // spawn a parent and a controller
-    for (entity,  mut transform, dimensions) in queries.iter_mut() {
-        let door = commands
-            .spawn(PbrBundle {
-                mesh: meshes.add(Cuboid::new(
-                    dimensions.length,
-                    dimensions.height,
-                    dimensions.thickness,
-                )),
-                material: materials.add(Color::srgb_u8(124, 144, 255)),
-                transform: Transform::from_xyz(
-                    dimensions.length / 2.0,
-                    dimensions.height / 2.0,
-                    0.0,
-                ),
-                ..default()
-            })
-            .id();
-
-        let joint = commands
-            .spawn(PbrBundle {
-                transform: *transform,
-                ..default()
-            })
-            .id();
-
-        transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
-
-        // Parent the child to the joint
-        commands.entity(joint).add_child(door);
-        commands.entity(entity).add_child(joint);
+    for (entity, properties, mut transform, dimensions) in queries.iter_mut() {
+        
+        match properties.door_type {
+            DoorType::SingleSliding => {}
+            DoorType::DoubleSliding => {}
+            DoorType::SingleSwinging => {
+                let door = commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Cuboid::new(
+                        dimensions.length,
+                        dimensions.height,
+                        dimensions.thickness,
+                    )),
+                    material: materials.add(Color::srgb_u8(124, 144, 255)),
+                    transform: Transform::from_xyz(
+                        dimensions.length / 2.0,
+                        dimensions.height / 2.0,
+                        0.0,
+                    ),
+                    ..default()
+                })
+                .id();
+    
+            let joint = commands
+                .spawn(PbrBundle {
+                    transform: *transform,
+                    ..default()
+                })
+                .id();
+    
+            transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
+    
+            // Parent the child to the joint
+            commands.entity(joint).add_child(door);
+            commands.entity(entity).add_child(joint);
+    
+            }
+            DoorType::DoubleSwinging => {}
+        }
 
         // Add components to the door
         commands.entity(entity).insert(DoorState::default());
