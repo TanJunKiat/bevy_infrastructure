@@ -267,11 +267,12 @@ fn update_door_movement(
             DoorType::DoubleSliding => {}
             DoorType::SingleSwinging => match goal {
                 DoorGoal::Closed => {
-                    if transform.rotation.to_euler(EulerRot::ZYX).1 <= 0.0 {
+                    if transform.rotation.to_euler(EulerRot::ZYX).1.abs() <= 0.02 {
+                        transform.rotation = Quat::from_xyzw(0.0, 0.0, 0.0, 1.0);
                         *state = DoorState::Closed;
                     } else {
                         *state = DoorState::Closing;
-                        transform.rotate(Quat::from_rotation_y(-0.01));
+                        transform.rotate(Quat::from_rotation_y(-0.01*properties.swing_value.signum()));
                     }
                 }
                 DoorGoal::Open => {
@@ -279,11 +280,12 @@ fn update_door_movement(
                         "Moving door {:?}",
                         transform.rotation.to_euler(EulerRot::ZYX)
                     );
-                    if transform.rotation.to_euler(EulerRot::ZYX).1 >= properties.swing_value {
+                    if transform.rotation.to_euler(EulerRot::ZYX).1.abs() >= properties.swing_value.abs() {
+                        transform.rotation = Quat::from_rotation_y(properties.swing_value);
                         *state = DoorState::Open;
                     } else {
                         *state = DoorState::Opening;
-                        transform.rotate(Quat::from_rotation_y(0.01));
+                        transform.rotate(Quat::from_rotation_y(0.01*properties.swing_value.signum()));
                     }
                 }
             },
