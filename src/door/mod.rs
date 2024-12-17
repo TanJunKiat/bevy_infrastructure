@@ -182,9 +182,41 @@ fn spawn_door(
     // spawn a parent and a controller
     for (entity, properties, transform, dimensions) in queries.iter_mut() {
         match properties.door_type {
-            DoorType::SingleSliding => {}
-            DoorType::DoubleSliding => {}
-            DoorType::SingleSwinging => {
+            DoorType::DoubleSliding => {
+                commands.spawn(DoorBundle {
+                    door_properties: DoorProperties::new(
+                        properties.name.clone(),
+                        -properties.swing_value.clone().abs() / 2.0,
+                        DoorType::SingleSliding,
+                    ),
+                    door_dimensions: DoorDimensions::new(
+                        dimensions.length / 2.0,
+                        dimensions.height,
+                        dimensions.thickness,
+                    ),
+                    transform: transform.clone(),
+                    ..Default::default()
+                });
+
+                let mut door_transform = transform.clone();
+                door_transform.translation.x += dimensions.length / 2.0;
+
+                commands.spawn(DoorBundle {
+                    door_properties: DoorProperties::new(
+                        properties.name.clone(),
+                        properties.swing_value.clone().abs() / 2.0,
+                        DoorType::SingleSliding,
+                    ),
+                    door_dimensions: DoorDimensions::new(
+                        dimensions.length / 2.0,
+                        dimensions.height,
+                        dimensions.thickness,
+                    ),
+                    transform: door_transform,
+                    ..Default::default()
+                });
+            }
+            DoorType::SingleSwinging | DoorType::SingleSliding => {
                 let door = commands
                     .spawn(PbrBundle {
                         mesh: meshes.add(Cuboid::new(
@@ -202,12 +234,7 @@ fn spawn_door(
                     })
                     .id();
 
-                let joint = commands
-                    .spawn(PbrBundle {
-                        transform: Transform { ..default() },
-                        ..default()
-                    })
-                    .id();
+                let joint = commands.spawn(PbrBundle::default()).id();
 
                 // Parent the child to the joint
                 commands.entity(joint).add_child(door);
@@ -312,8 +339,26 @@ fn update_door_movement(
         debug!("Moving door {}", properties.name);
 
         match properties.door_type {
-            DoorType::SingleSliding => {}
-            DoorType::DoubleSliding => {}
+            DoorType::SingleSliding => match goal {
+                DoorGoal::Closed => {
+                    if transform.translation.x.abs() <= 0.02 {
+                        transform.translation.x = 0.0;
+                        *state = DoorState::Closed;
+                    } else {
+                        *state = DoorState::Closing;
+                        transform.translation.x += -0.01 * properties.swing_value.signum();
+                    }
+                }
+                DoorGoal::Open => {
+                    if transform.translation.x.abs() >= properties.swing_value.abs() {
+                        transform.translation.x = properties.swing_value;
+                        *state = DoorState::Open;
+                    } else {
+                        *state = DoorState::Opening;
+                        transform.translation.x += 0.01 * properties.swing_value.signum();
+                    }
+                }
+            },
             DoorType::SingleSwinging => match goal {
                 DoorGoal::Closed => {
                     if transform.rotation.to_euler(EulerRot::ZYX).1.abs() <= 0.02 {
@@ -344,7 +389,7 @@ fn update_door_movement(
                     }
                 }
             },
-            DoorType::DoubleSwinging => {}
+            _ => {}
         }
     }
 }
