@@ -1,0 +1,12 @@
+[package]
+name = "bevy_infrastructure"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14.2"
+log = "0.4.22"
+
+[dev-dependencies]
+bevy_panorbit_camera = "0.20"
+bevy_egui = "0.30"
