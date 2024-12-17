@@ -41,6 +41,6 @@ fn close_door(mut door_request: EventWriter<DoorEvent>) {
 ```
 
 # Examples
-[single_swinging](docs/videos/single_swing.gif | width=500) [double_swinging](docs/videos/double_swinging.gif | width=500)
+<img src="docs/videos/single_swing.gif" width="50%"/> <img src="docs/videos/double_swinging.gif" width="50%"/>
 
-[single_sliding](docs/videos/single_sliding.gif | width=500) [double_sliding](docs/videos/double_sliding.gif | width=500)
+<img src="docs/videos/single_sliding.gif" width="50%"/> <img src="docs/videos/double_sliding.gif" width="50%"/>
